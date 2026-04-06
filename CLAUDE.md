@@ -44,22 +44,18 @@ Core capabilities to build:
 The `documents` table and `match_documents` RPC function must exist before running the API. Run this SQL in the Supabase SQL editor:
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS vector;
+-- 1. Adicionar coluna user_id
+ALTER TABLE documents ADD COLUMN user_id UUID REFERENCES auth.users(id);
 
-CREATE TABLE documents (
-  id bigserial PRIMARY KEY,
-  content TEXT NOT NULL,
-  embedding vector(1536) NOT NULL,
-  metadata JSONB
-);
+-- 2. Índice para filtrar por user_id eficientemente
+CREATE INDEX ON documents(user_id);
 
-CREATE INDEX ON documents
-USING ivfflat (embedding vector_cosine_ops)
-WITH (lists = 100);
-
+-- 3. Função atualizada
 CREATE OR REPLACE FUNCTION match_documents(
   query_embedding vector(1536),
-  match_count int DEFAULT 5
+  match_count int DEFAULT 5,
+  match_threshold float DEFAULT 0.75,
+  p_user_id UUID DEFAULT NULL
 )
 RETURNS TABLE (
   id bigint,
@@ -72,6 +68,9 @@ LANGUAGE sql STABLE AS $$
     content,
     1 - (embedding <=> query_embedding) AS similarity
   FROM documents
+  WHERE
+    (p_user_id IS NULL OR user_id = p_user_id)
+    AND 1 - (embedding <=> query_embedding) > match_threshold
   ORDER BY embedding <=> query_embedding
   LIMIT match_count;
 $$;
@@ -89,18 +88,19 @@ NestJS REST API with three feature modules:
 
 **`SupabaseModule`** (`src/supabase/`)
 - `SupabaseService` — wraps `@supabase/supabase-js`.
-  - `saveEmbeddings(embeddings, filename)` — inserts rows into `documents`; `filename` is stored in the `metadata` column
-  - `searchSimilar(embedding, matchCount?)` — calls `match_documents` RPC for semantic search, returns `DocumentMatch[]`
+  - `saveEmbeddings(embeddings, filename, userId?)` — inserts rows into `documents`; `filename` stored in `metadata`, `userId` in `user_id` column (nullable until auth is implemented)
+  - `searchSimilar(embedding, userId?, matchCount?, threshold?)` — calls `match_documents` RPC with `p_user_id`; defaults: `matchCount=5`, `threshold=0.5`; when `userId` is null the RPC returns results across all users
 
 **`PdfModule`** (`src/pdf/`) — imports `AiModule` and `SupabaseModule`
 - `PdfController`
   - `POST /pdf/upload` — multipart `file` field, `application/pdf` only; returns `{ textLength, totalChunks }`
   - `POST /pdf/ask` — JSON body `{ question: string }`; returns `{ answer: string }`
 - `PdfService`
-  - `processPdf` — parses PDF (`pdf-parse` v1.1.1), chunks text (size 500, overlap 100), embeds all chunks in one batch call, saves to Supabase. **Note:** currently slices to first 10 chunks (`TODO: remover limite após testes`)
-  - `ask` — embeds the question, calls `searchSimilar`, joins top matches as context, calls `AiService.chat`
+  - `processPdf(file, userId?)` — extracts text via `pdfjs-dist` (legacy build, Node.js worker), validates with `isTextValid`, cleans, chunks (size 500, overlap 100), embeds all chunks in one batch call, saves to Supabase
+  - `ask(question, userId?)` — embeds the question, calls `searchSimilar`, joins top matches as context, calls `AiService.chat`
+  - `cleanText` / `chunkText` / `isTextValid` — public methods (useful for unit testing in isolation); `isTextValid` rejects scanned PDFs by checking ratio of non-Latin characters
 
-**`AppModule`** imports `AiModule`, `SupabaseModule`, `PdfModule`. Server listens on `PORT` or 3000.
+**`AppModule`** imports `ConfigModule.forRoot({ isGlobal: true })`, `AiModule`, `SupabaseModule`, `PdfModule`. Server listens on `PORT` or 3000.
 
 **Testing:** Unit specs (`*.spec.ts`) live alongside source files in `src/`. E2E specs live in `test/` with a separate `jest-e2e.json` config.
 

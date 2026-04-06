@@ -38,24 +38,67 @@ export class AiService {
   }
 
   async chat(context: string, question: string): Promise<string> {
-    const prompt = `Você é um assistente de programação.
-
-Responda baseado APENAS no conteúdo abaixo:
-Se não encontrar a resposta, diga: "Não encontrei no material".
-
-Conteúdo:
-${context}
-
-Pergunta:
-${question}
-
-Se possível:
-- explique de forma simples
-- dê exemplo de código`;
-
     const response = await this.client.chat.completions.create({
       model: this.chatModel,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        {
+          role: 'system',
+          content: `Você é um assistente técnico especializado em programação.
+Suas respostas são baseadas EXCLUSIVAMENTE nos trechos de documentação fornecidos.
+
+Regras:
+- Se a resposta não estiver nos trechos, diga exatamente: "Não encontrei essa informação na documentação enviada."
+- Nunca invente ou complete com conhecimento externo
+- Prefira exemplos de código quando aplicável
+- Seja direto e objetivo
+- Use markdown para formatar código`,
+        },
+        {
+          role: 'user',
+          content: `Trechos da documentação:
+${context}
+
+Pergunta: ${question}`,
+        },
+      ],
+      temperature: 0.2, //baixo - respostas mais determinísticas e precisas
+    });
+
+    return response.choices[0].message.content ?? '';
+  }
+
+  async chatWithLibContext(
+    context: string,
+    question: string,
+    libName: string,
+    version: string,
+  ): Promise<string> {
+    const response = await this.client.chat.completions.create({
+      model: this.chatModel,
+      messages: [
+        {
+          role: 'system',
+          content: `Você é um assistente técnico especializado em programação.
+Suas respostas são baseadas EXCLUSIVAMENTE nos trechos de documentação fornecidos.
+A documentação é referente à biblioteca ${libName}${version ? ` na versão ${version}` : ''}.
+
+Regras:
+- Responda APENAS com base nos trechos fornecidos
+- NÃO use conhecimento de outras versões da biblioteca
+- Se a informação não estiver nos trechos, diga exatamente: "Não encontrei essa informação na documentação de ${libName}${version ? `@${version}` : ''}."
+- Prefira exemplos de código quando aplicável
+- Seja direto e objetivo
+- Use markdown para formatar código`,
+        },
+        {
+          role: 'user',
+          content: `Trechos da documentação:
+${context}
+
+Pergunta: ${question}`,
+        },
+      ],
+      temperature: 0.2,
     });
 
     return response.choices[0].message.content ?? '';
