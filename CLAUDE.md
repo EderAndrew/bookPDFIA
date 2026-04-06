@@ -82,14 +82,23 @@ $$;
 NestJS REST API with three feature modules:
 
 **`AiModule`** (`src/ai/`)
-- `AiService` — wraps OpenAI SDK (`text-embedding-3-small`). `embed(text: string): Promise<number[]>` returns the embedding vector for a single text.
+- `AiService` — wraps OpenAI SDK.
+  - `embed(text)` — single embedding via `text-embedding-3-small`
+  - `embedBatch(texts)` — batch embeddings in one OpenAI call, returns `ChunkEmbedding[]`
+  - `chat(context, question)` — RAG answer via `gpt-4o`; prompt is in Portuguese, answers based only on provided context
 
 **`SupabaseModule`** (`src/supabase/`)
-- `SupabaseService` — wraps `@supabase/supabase-js`. `saveEmbeddings(embeddings: ChunkEmbedding[]): Promise<void>` inserts rows into `documents` (the `metadata` column is defined in the schema but not yet populated). `searchSimilar(embedding: number[], matchCount?: number): Promise<DocumentMatch[]>` calls the `match_documents` RPC for semantic search — implemented but not yet called by any controller.
+- `SupabaseService` — wraps `@supabase/supabase-js`.
+  - `saveEmbeddings(embeddings, filename)` — inserts rows into `documents`; `filename` is stored in the `metadata` column
+  - `searchSimilar(embedding, matchCount?)` — calls `match_documents` RPC for semantic search, returns `DocumentMatch[]`
 
 **`PdfModule`** (`src/pdf/`) — imports `AiModule` and `SupabaseModule`
-- `PdfController` — `POST /pdf/upload` (multipart `file` field, `application/pdf` only)
-- `PdfService` — parses PDF (`pdf-parse` v1.1.1), chunks text (size 500, overlap 100), embeds each chunk **sequentially** via `AiService.embed` (one OpenAI call per chunk), saves all to Supabase via `SupabaseService.saveEmbeddings`. Returns `{ textLength, totalChunks }`.
+- `PdfController`
+  - `POST /pdf/upload` — multipart `file` field, `application/pdf` only; returns `{ textLength, totalChunks }`
+  - `POST /pdf/ask` — JSON body `{ question: string }`; returns `{ answer: string }`
+- `PdfService`
+  - `processPdf` — parses PDF (`pdf-parse` v1.1.1), chunks text (size 500, overlap 100), embeds all chunks in one batch call, saves to Supabase. **Note:** currently slices to first 10 chunks (`TODO: remover limite após testes`)
+  - `ask` — embeds the question, calls `searchSimilar`, joins top matches as context, calls `AiService.chat`
 
 **`AppModule`** imports `AiModule`, `SupabaseModule`, `PdfModule`. Server listens on `PORT` or 3000.
 
@@ -101,4 +110,4 @@ NestJS REST API with three feature modules:
 
 **Cross-module types:** `ChunkEmbedding` is defined and exported from `src/ai/ai.service.ts` and imported directly by `SupabaseService`. `DocumentMatch` is defined in `src/supabase/supabase.service.ts`.
 
-**Not yet implemented:** Q&A and code generation endpoints — only `POST /pdf/upload` exists so far. The `searchSimilar` method in `SupabaseService` is ready for use once those endpoints are added.
+**Not yet implemented:** Code generation endpoint.

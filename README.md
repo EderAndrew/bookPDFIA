@@ -81,7 +81,7 @@ pnpm run start:prod
 
 ### `POST /pdf/upload`
 
-Faz upload de um PDF, extrai o texto, divide em chunks, gera embeddings via OpenAI e salva no Supabase.
+Faz upload de um PDF, extrai e limpa o texto, divide em chunks, gera embeddings em batch via OpenAI e salva no Supabase.
 
 **Request:** `multipart/form-data`
 
@@ -106,6 +106,35 @@ Faz upload de um PDF, extrai o texto, divide em chunks, gera embeddings via Open
 | `400` | `"O arquivo deve ser um PDF."` |
 | `500` | `"Erro ao salvar embeddings: ..."` |
 
+---
+
+### `POST /pdf/ask`
+
+Faz uma pergunta em linguagem natural. A API busca os chunks mais relevantes no Supabase via busca semântica e responde usando GPT-4o com base apenas no conteúdo do PDF.
+
+**Request:** `application/json`
+
+```json
+{
+  "question": "Como funciona um array em Go?"
+}
+```
+
+**Response `200`:**
+
+```json
+{
+  "answer": "Em Go, um array é uma sequência de elementos de tamanho fixo..."
+}
+```
+
+**Erros:**
+
+| Status | Mensagem |
+|---|---|
+| `400` | `"A pergunta não pode ser vazia."` |
+| `500` | `"Erro na busca semântica: ..."` |
+
 ## Testes
 
 ```bash
@@ -116,6 +145,5 @@ pnpm run test:cov      # cobertura
 
 ## Roadmap
 
-- [ ] `POST /chat/ask` — Q&A com base no conteúdo do PDF (busca semântica + LLM)
-- [ ] `POST /chat/code` — geração de código com contexto do PDF
+- [ ] `POST /pdf/code` — geração de código com contexto do PDF
 - [ ] Associar chunks ao PDF de origem (`pdf_id` na tabela `documents`)

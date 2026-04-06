@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Post,
   UploadedFile,
@@ -23,8 +24,15 @@ export class PdfController {
       throw new BadRequestException('O arquivo deve ser um PDF.');
     }
 
-    const result = await this.pdfService.processPdf(file);
+    return this.pdfService.processPdf(file);
+  }
 
-    return result;
+  @Post('ask')
+  async ask(@Body('question') question: string) {
+    if (!question?.trim()) {
+      throw new BadRequestException('A pergunta não pode ser vazia.');
+    }
+
+    return this.pdfService.ask(question);
   }
 }
