@@ -20,10 +20,14 @@ export class SupabaseService {
     );
   }
 
-  async saveEmbeddings(embeddings: ChunkEmbedding[]): Promise<void> {
+  async saveEmbeddings(
+    embeddings: ChunkEmbedding[],
+    filename: string,
+  ): Promise<void> {
     const rows = embeddings.map(({ chunk, embedding }) => ({
       content: chunk,
       embedding,
+      metadata: { filename },
     }));
 
     const { error } = await this.client.from('documents').insert(rows);

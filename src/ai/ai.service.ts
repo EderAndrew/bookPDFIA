@@ -23,4 +23,16 @@ export class AiService {
 
     return response.data[0].embedding;
   }
+
+  async embedBatch(texts: string[]): Promise<ChunkEmbedding[]> {
+    const response = await this.client.embeddings.create({
+      model: this.model,
+      input: texts,
+    });
+
+    return response.data.map((item, index) => ({
+      chunk: texts[index],
+      embedding: item.embedding,
+    }));
+  }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import pdf from 'pdf-parse';
-import { AiService, ChunkEmbedding } from '../ai/ai.service';
+import { AiService } from '../ai/ai.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
 const CHUNK_SIZE = 500;
@@ -18,15 +18,10 @@ export class PdfService {
     totalChunks: number;
   }> {
     const data = await pdf(file.buffer);
-    const chunks = this.chunkText(data.text);
+    const chunks = this.chunkText(data.text).slice(0, 10); // TODO: remover limite após testes
 
-    const embeddings: ChunkEmbedding[] = [];
-    for (const chunk of chunks) {
-      const embedding = await this.aiService.embed(chunk);
-      embeddings.push({ chunk, embedding });
-    }
-
-    await this.supabaseService.saveEmbeddings(embeddings);
+    const embeddings = await this.aiService.embedBatch(chunks);
+    await this.supabaseService.saveEmbeddings(embeddings, file.originalname);
 
     return {
       textLength: data.text.length,
