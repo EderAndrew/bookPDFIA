@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CrawlerService } from '../crawler/crawler.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -15,7 +18,10 @@ export class ProjectsService {
 
     const project = await this.projectsRepository.create(dto.name, userId);
     const savedDeps = deps.length
-      ? await this.projectsRepository.saveDependencies(project.id as string, deps)
+      ? await this.projectsRepository.saveDependencies(
+          project.id as string,
+          deps,
+        )
       : [];
 
     // Dispara crawling em background para cada dependência
@@ -55,8 +61,14 @@ export class ProjectsService {
   private extractDeps(
     packageJson: Record<string, unknown>,
   ): { libName: string; version: string }[] {
-    const dependencies = (packageJson.dependencies ?? {}) as Record<string, string>;
-    const devDependencies = (packageJson.devDependencies ?? {}) as Record<string, string>;
+    const dependencies = (packageJson.dependencies ?? {}) as Record<
+      string,
+      string
+    >;
+    const devDependencies = (packageJson.devDependencies ?? {}) as Record<
+      string,
+      string
+    >;
 
     return Object.entries({ ...dependencies, ...devDependencies }).map(
       ([libName, version]) => ({

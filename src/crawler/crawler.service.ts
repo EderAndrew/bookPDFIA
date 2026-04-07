@@ -38,11 +38,15 @@ export class CrawlerService {
         return;
       }
 
-      this.logger.log(`[${libName}@${version}] Buscando URL da documentação...`);
+      this.logger.log(
+        `[${libName}@${version}] Buscando URL da documentação...`,
+      );
       const docUrl = await this.npmStrategy.findDocUrl(libName);
 
       if (!docUrl) {
-        this.logger.warn(`[${libName}@${version}] URL da documentação não encontrada.`);
+        this.logger.warn(
+          `[${libName}@${version}] URL da documentação não encontrada.`,
+        );
         await this.updateDepStatus(projectDepId, 'failed');
         return;
       }
@@ -53,7 +57,9 @@ export class CrawlerService {
       const chunks = await this.docsStrategy.extractContent(docUrl);
 
       if (!chunks.length) {
-        this.logger.warn(`[${libName}@${version}] Nenhum conteúdo extraído de ${docUrl}.`);
+        this.logger.warn(
+          `[${libName}@${version}] Nenhum conteúdo extraído de ${docUrl}.`,
+        );
         await this.updateDepStatus(projectDepId, 'failed');
         return;
       }
@@ -75,7 +81,9 @@ export class CrawlerService {
       await this.libDocsRepository.save(docs);
       await this.updateDepStatus(projectDepId, 'indexed');
 
-      this.logger.log(`[${libName}@${version}] Indexação concluída. ${docs.length} docs salvos.`);
+      this.logger.log(
+        `[${libName}@${version}] Indexação concluída. ${docs.length} docs salvos.`,
+      );
     } catch (err) {
       this.logger.error(
         `[${libName}@${version}] Erro durante crawling: ${String(err)}`,
@@ -84,7 +92,10 @@ export class CrawlerService {
     }
   }
 
-  private async updateDepStatus(depId: string, status: DepStatus): Promise<void> {
+  private async updateDepStatus(
+    depId: string,
+    status: DepStatus,
+  ): Promise<void> {
     await this.supabaseService.client
       .from('project_dependencies')
       .update({ doc_status: status })

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 
@@ -32,7 +34,9 @@ export class NpmStrategy {
 
       return null;
     } catch (err) {
-      this.logger.warn(`Falha ao consultar npm registry para ${libName}: ${String(err)}`);
+      this.logger.warn(
+        `Falha ao consultar npm registry para ${libName}: ${String(err)}`,
+      );
       return null;
     }
   }

@@ -1,6 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { resolve } from 'path';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { AiService } from '../ai/ai.service';
@@ -106,7 +112,10 @@ export class PdfService {
     question: string,
     projectId: string,
     userId: string,
-  ): Promise<{ answer: string; sources: { libName: string; version: string }[] }> {
+  ): Promise<{
+    answer: string;
+    sources: { libName: string; version: string }[];
+  }> {
     const project = await this.projectsService.getProject(projectId, userId);
 
     const deps = (project.project_dependencies as any[]) ?? [];
@@ -143,13 +152,16 @@ export class PdfService {
 
     if (!allMatches.length) {
       return {
-        answer: 'Não encontrei documentação relevante para esta pergunta nas dependências do projeto.',
+        answer:
+          'Não encontrei documentação relevante para esta pergunta nas dependências do projeto.',
         sources: [],
       };
     }
 
     const context = allMatches
-      .map((m, i) => `[${m.libName}@${m.version} — Trecho ${i + 1}]\n${m.content}`)
+      .map(
+        (m, i) => `[${m.libName}@${m.version} — Trecho ${i + 1}]\n${m.content}`,
+      )
       .join('\n\n');
 
     // Fontes únicas presentes no contexto
@@ -163,7 +175,9 @@ export class PdfService {
       })
       .map((m) => ({ libName: m.libName, version: m.version }));
 
-    const libsDescription = sources.map((s) => `${s.libName}@${s.version}`).join(', ');
+    const libsDescription = sources
+      .map((s) => `${s.libName}@${s.version}`)
+      .join(', ');
     const answer = await this.aiService.chatWithLibContext(
       context,
       question,

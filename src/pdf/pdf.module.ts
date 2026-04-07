@@ -9,7 +9,13 @@ import { PdfService } from './pdf.service';
 import { DocumentRepository } from './document.repository';
 
 @Module({
-  imports: [AiModule, SupabaseModule, AuthModule, ProjectsModule, CrawlerModule],
+  imports: [
+    AiModule,
+    SupabaseModule,
+    AuthModule,
+    ProjectsModule,
+    CrawlerModule,
+  ],
   controllers: [PdfController],
   providers: [PdfService, DocumentRepository],
   exports: [PdfService],

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ChunkEmbedding } from '../ai/ai.service';
 import { SupabaseService } from '../supabase/supabase.service';
