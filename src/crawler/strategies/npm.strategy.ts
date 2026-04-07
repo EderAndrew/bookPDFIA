@@ -19,8 +19,25 @@ export class NpmStrategy {
         { timeout: 8000 },
       );
 
+      // Prefere campo explícito de docs, se existir
+      const docsUrl: unknown = data.docs;
+      if (typeof docsUrl === 'string' && docsUrl.startsWith('http')) {
+        return docsUrl;
+      }
+
       const homepage: unknown = data.homepage;
       if (typeof homepage === 'string' && homepage.startsWith('http')) {
+        // Se a homepage não aponta para uma rota de docs, tenta /docs
+        const url = new URL(homepage);
+        if (url.pathname === '/' || url.pathname === '') {
+          const docsCandidate = `${url.origin}/docs`;
+          try {
+            await axios.head(docsCandidate, { timeout: 5000 });
+            return docsCandidate;
+          } catch {
+            // /docs não existe, usa a homepage mesmo
+          }
+        }
         return homepage;
       }
 

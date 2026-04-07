@@ -22,6 +22,23 @@ export class LibDocsRepository {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async save(docs: LibDocRow[]): Promise<void> {
+    if (!docs.length) return;
+
+    const { libName, version } = docs[0];
+
+    // Remove docs anteriores para permitir re-crawl limpo
+    const { error: deleteError } = await this.supabaseService.client
+      .from('lib_docs')
+      .delete()
+      .eq('lib_name', libName)
+      .eq('version', version);
+
+    if (deleteError) {
+      throw new InternalServerErrorException(
+        `Erro ao limpar lib_docs: ${deleteError.message}`,
+      );
+    }
+
     const rows = docs.map((d) => ({
       lib_name: d.libName,
       version: d.version,
@@ -32,7 +49,7 @@ export class LibDocsRepository {
 
     const { error } = await this.supabaseService.client
       .from('lib_docs')
-      .upsert(rows, { onConflict: 'lib_name,version,source_url' });
+      .insert(rows);
 
     if (error) {
       throw new InternalServerErrorException(

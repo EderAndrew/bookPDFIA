@@ -44,6 +44,33 @@ export class ProjectsService {
     return this.projectsRepository.findAllByUser(userId);
   }
 
+  async recrawlProject(projectId: string, userId: string) {
+    const project = await this.projectsRepository.findById(projectId, userId);
+
+    if (!project) {
+      throw new NotFoundException('Projeto não encontrado.');
+    }
+
+    const deps = (project.project_dependencies as any[]) ?? [];
+    const toRecrawl = deps.filter(
+      (d) => d.doc_status === 'pending' || d.doc_status === 'failed',
+    );
+
+    setImmediate(() => {
+      for (const dep of toRecrawl) {
+        this.crawlerService
+          .crawlLib(
+            dep.lib_name as string,
+            dep.version as string,
+            dep.id as string,
+          )
+          .catch(console.error);
+      }
+    });
+
+    return { queued: toRecrawl.length };
+  }
+
   async getProject(projectId: string, userId: string) {
     const project = await this.projectsRepository.findById(projectId, userId);
 

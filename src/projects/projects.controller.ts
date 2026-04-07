@@ -29,4 +29,12 @@ export class ProjectsController {
   ) {
     return this.projectsService.getProject(projectId, user.id);
   }
+
+  @Post(':id/recrawl')
+  recrawlProject(
+    @Param('id') projectId: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.projectsService.recrawlProject(projectId, user.id);
+  }
 }

@@ -126,8 +126,6 @@ CREATE INDEX ON lib_docs
   USING ivfflat (embedding vector_cosine_ops)
   WITH (lists = 100);
 
-CREATE UNIQUE INDEX ON lib_docs (lib_name, version, source_url);
-
 CREATE OR REPLACE FUNCTION match_lib_docs(
   query_embedding vector(1536),
   p_lib_name      TEXT,
@@ -431,6 +429,22 @@ Retorna um projeto específico com o status atualizado de cada dependência.
 
 ---
 
+#### `POST /projects/:id/recrawl`
+
+Reenfileira para crawling todas as dependências do projeto com `doc_status` igual a `pending` ou `failed`, sem precisar recriar o projeto.
+
+**Response `201`:**
+
+```json
+{ "queued": 2 }
+```
+
+| Status | Mensagem |
+|---|---|
+| `404` | `"Projeto não encontrado."` |
+
+---
+
 ## Arquitetura
 
 ```
@@ -453,10 +467,10 @@ POST /projects
   └─ ProjectsService.createProject
        ├─ cria projeto e deps (status: pending)
        └─ setImmediate → CrawlerService.crawlLib (por dep, em paralelo)
-            ├─ NpmStrategy  — consulta npm registry → extrai URL da doc
-            ├─ DocsStrategy — axios + cheerio → extrai e chunka o conteúdo
+            ├─ NpmStrategy  — consulta npm registry → extrai URL da doc (tenta /docs se homepage for raiz)
+            ├─ DocsStrategy — crawl multi-página (até 20 páginas), segue links de docs internos
             ├─ AiService.embedBatch — uma chamada OpenAI por biblioteca
-            └─ LibDocsRepository.save — upsert com dedup por (lib, version, source_url)
+            └─ LibDocsRepository.save — deleta docs anteriores e insere os novos chunks
 ```
 
 ## Testes
@@ -470,6 +484,6 @@ pnpm run test:cov      # cobertura
 ## Roadmap
 
 - [ ] `POST /pdf/code` — geração de código com contexto do PDF
-- [ ] Suporte a múltiplas páginas por biblioteca (crawling recursivo)
+- [x] Suporte a múltiplas páginas por biblioteca (crawling recursivo, até 20 páginas)
 - [ ] Associar chunks ao PDF de origem (`pdf_id` na tabela `documents`)
 - [ ] Listar PDFs enviados por usuário
