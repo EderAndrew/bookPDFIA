@@ -6,10 +6,14 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthRepository } from '../auth.repository';
+import { ProfileRepository } from '../profile.repository';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly authRepository: AuthRepository) {}
+  constructor(
+    private readonly authRepository: AuthRepository,
+    private readonly profileRepository: ProfileRepository,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -25,7 +29,20 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Token inválido ou expirado.');
     }
 
-    (request as Request & { user: unknown }).user = data.user;
+    const profile = await this.profileRepository.findById(data.user.id);
+
+    if (!profile) {
+      throw new UnauthorizedException('Perfil de usuário não encontrado.');
+    }
+
+    (request as Request & { user: unknown }).user = {
+      id: data.user.id,
+      email: data.user.email,
+      role: profile.role,
+      organization_id: profile.organization_id,
+      full_name: profile.full_name,
+    };
+
     return true;
   }
 

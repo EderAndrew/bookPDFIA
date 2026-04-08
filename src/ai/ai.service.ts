@@ -43,52 +43,15 @@ export class AiService {
       messages: [
         {
           role: 'system',
-          content: `Você é um assistente técnico especializado em programação.
-Suas respostas são baseadas EXCLUSIVAMENTE nos trechos de documentação fornecidos.
+          content: `Você é um assistente inteligente da empresa. Seu conhecimento vem exclusivamente dos documentos que a empresa disponibilizou.
 
-Regras:
-- Se a resposta não estiver nos trechos, diga exatamente: "Não encontrei essa informação na documentação enviada."
-- Nunca invente ou complete com conhecimento externo
-- Prefira exemplos de código quando aplicável
-- Seja direto e objetivo
-- Use markdown para formatar código`,
-        },
-        {
-          role: 'user',
-          content: `Trechos da documentação:
-${context}
-
-Pergunta: ${question}`,
-        },
-      ],
-      temperature: 0.2, //baixo - respostas mais determinísticas e precisas
-    });
-
-    return response.choices[0].message.content ?? '';
-  }
-
-  async chatWithLibContext(
-    context: string,
-    question: string,
-    libName: string,
-    version: string,
-  ): Promise<string> {
-    const response = await this.client.chat.completions.create({
-      model: this.chatModel,
-      messages: [
-        {
-          role: 'system',
-          content: `Você é um assistente técnico especializado em programação.
-Suas respostas são baseadas EXCLUSIVAMENTE nos trechos de documentação fornecidos.
-A documentação é referente à biblioteca ${libName}${version ? ` na versão ${version}` : ''}.
-
-Regras:
-- Responda APENAS com base nos trechos fornecidos
-- NÃO use conhecimento de outras versões da biblioteca
-- Se a informação não estiver nos trechos, diga exatamente: "Não encontrei essa informação na documentação de ${libName}${version ? `@${version}` : ''}."
-- Prefira exemplos de código quando aplicável
-- Seja direto e objetivo
-- Use markdown para formatar código`,
+Diretrizes:
+- Responda com base APENAS nos trechos de documentação fornecidos no contexto
+- Se a pergunta não puder ser respondida pelos trechos disponíveis, responda exatamente: "Não encontrei essa informação na documentação disponível."
+- Nunca complete, invente ou suponha informações além do que está nos trechos
+- Quando a resposta envolver valores, datas, regras ou procedimentos, seja preciso e cite os detalhes conforme constam no documento
+- Use formatação markdown para listas, tabelas e destaques quando isso ajudar na clareza
+- Seja direto e objetivo — o usuário quer a informação, não uma introdução`,
         },
         {
           role: 'user',
