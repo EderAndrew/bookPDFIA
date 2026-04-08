@@ -6,7 +6,11 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { resolve } from 'path';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { AiService } from '../ai/ai.service';
-import { DocumentMatch, DocumentsRepository, DocumentSummary } from './documents.repository';
+import {
+  DocumentMatch,
+  DocumentsRepository,
+  DocumentSummary,
+} from './documents.repository';
 
 // Aponta para o worker real — necessário em Node.js com pdfjs-dist v4+
 pdfjsLib.GlobalWorkerOptions.workerSrc = `file://${resolve(process.cwd(), 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs')}`;
@@ -66,7 +70,11 @@ export class DocumentsService {
     const chunks = this.chunkText(cleanedText);
 
     const embeddings = await this.aiService.embedBatch(chunks);
-    await this.documentsRepository.save(embeddings, file.originalname, organizationId);
+    await this.documentsRepository.save(
+      embeddings,
+      file.originalname,
+      organizationId,
+    );
 
     return {
       textLength: rawText.length,
@@ -79,12 +87,13 @@ export class DocumentsService {
     organizationId: string,
   ): Promise<{ answer: string; sources: { filename: string }[] }> {
     const questionEmbedding = await this.aiService.embed(question);
-    const matches: DocumentMatch[] = await this.documentsRepository.searchSimilar(
-      questionEmbedding,
-      organizationId,
-      8,    // mais contexto = respostas mais completas
-      0.4,  // threshold menor = não perde trechos relevantes em docs técnicos
-    );
+    const matches: DocumentMatch[] =
+      await this.documentsRepository.searchSimilar(
+        questionEmbedding,
+        organizationId,
+        8, // mais contexto = respostas mais completas
+        0.4, // threshold menor = não perde trechos relevantes em docs técnicos
+      );
 
     if (!matches.length) {
       return {

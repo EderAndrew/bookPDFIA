@@ -57,10 +57,7 @@ export class DocumentsController {
   }
 
   @Post('chat')
-  ask(
-    @Body() dto: AskDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  ask(@Body() dto: AskDto, @CurrentUser() user: AuthenticatedUser) {
     return this.documentsService.ask(dto.question, user.organization_id);
   }
 }

@@ -87,7 +87,10 @@ export class DocumentsRepository {
     // Agrupa por filename e conta chunks
     const map = new Map<string, { totalChunks: number; uploadedAt: string }>();
 
-    for (const row of (data ?? []) as { filename: string; created_at: string }[]) {
+    for (const row of (data ?? []) as {
+      filename: string;
+      created_at: string;
+    }[]) {
       const existing = map.get(row.filename);
       if (existing) {
         existing.totalChunks += 1;

@@ -11,7 +11,13 @@ import { OrganizationsModule } from '../organizations/organizations.module';
 @Module({
   imports: [SupabaseModule, OrganizationsModule],
   controllers: [AuthController],
-  providers: [AuthService, AuthGuard, AuthRepository, ProfileRepository, RolesGuard],
+  providers: [
+    AuthService,
+    AuthGuard,
+    AuthRepository,
+    ProfileRepository,
+    RolesGuard,
+  ],
   exports: [AuthGuard, AuthRepository, ProfileRepository, RolesGuard],
 })
 export class AuthModule {}

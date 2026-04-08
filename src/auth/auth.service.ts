@@ -43,7 +43,8 @@ export class AuthService {
     }
 
     return {
-      message: 'Conta criada com sucesso. Verifique seu e-mail para confirmar o cadastro.',
+      message:
+        'Conta criada com sucesso. Verifique seu e-mail para confirmar o cadastro.',
       user: data.user,
       organization: org,
     };
