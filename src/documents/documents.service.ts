@@ -1,10 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { basename, resolve } from 'path';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { AiService } from '../ai/ai.service';
 import {
   DocumentMatch,
@@ -13,6 +10,7 @@ import {
 } from './documents.repository';
 
 // Aponta para o worker real — necessário em Node.js com pdfjs-dist v4+
+
 pdfjsLib.GlobalWorkerOptions.workerSrc = `file://${resolve(process.cwd(), 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs')}`;
 
 const CHUNK_SIZE = 1000;
@@ -26,7 +24,9 @@ export class DocumentsService {
   ) {}
 
   private isPdfBuffer(buffer: Buffer): boolean {
-    return buffer.length >= 4 && buffer.slice(0, 4).toString('ascii') === '%PDF';
+    return (
+      buffer.length >= 4 && buffer.slice(0, 4).toString('ascii') === '%PDF'
+    );
   }
 
   private async extractTextFromPdf(buffer: Buffer): Promise<string> {
@@ -48,8 +48,9 @@ export class DocumentsService {
       const textContent = await page.getTextContent();
 
       const pageText = textContent.items
-        .map((item: any) => item.str)
-        .filter((str: string) => str.trim().length > 0)
+        .filter((item): item is TextItem => 'str' in item)
+        .map((item) => item.str)
+        .filter((str) => str.trim().length > 0)
         .join(' ');
 
       fullText += pageText + '\n\n';
@@ -63,9 +64,7 @@ export class DocumentsService {
     organizationId: string,
   ): Promise<{ textLength: number; totalChunks: number }> {
     if (!this.isPdfBuffer(file.buffer)) {
-      throw new BadRequestException(
-        'O arquivo enviado não é um PDF válido.',
-      );
+      throw new BadRequestException('O arquivo enviado não é um PDF válido.');
     }
 
     const rawText = await this.extractTextFromPdf(file.buffer);
@@ -85,7 +84,11 @@ export class DocumentsService {
     );
 
     const embeddings = await this.aiService.embedBatch(chunks);
-    await this.documentsRepository.save(embeddings, safeFilename, organizationId);
+    await this.documentsRepository.save(
+      embeddings,
+      safeFilename,
+      organizationId,
+    );
 
     return {
       textLength: rawText.length,

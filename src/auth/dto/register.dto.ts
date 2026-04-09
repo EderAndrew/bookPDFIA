@@ -10,7 +10,8 @@ export class RegisterDto {
   @IsString()
   @MinLength(8)
   @Matches(/^(?=.*[A-Z])(?=.*\d).+$/, {
-    message: 'A senha deve ter no mínimo 8 caracteres, uma letra maiúscula e um número.',
+    message:
+      'A senha deve ter no mínimo 8 caracteres, uma letra maiúscula e um número.',
   })
   password: string;
 

@@ -11,6 +11,23 @@ export interface SignUpMetadata {
 export class AuthRepository {
   constructor(private readonly supabaseService: SupabaseService) {}
 
+  async createAdminUser(
+    email: string,
+    password: string,
+    metadata: SignUpMetadata,
+  ) {
+    return this.supabaseService.client.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: metadata.full_name,
+        organization_id: metadata.organization_id,
+        role: metadata.role,
+      },
+    });
+  }
+
   async signUp(email: string, password: string, metadata: SignUpMetadata) {
     return this.supabaseService.client.auth.signUp({
       email,
@@ -20,10 +37,12 @@ export class AuthRepository {
   }
 
   async signIn(email: string, password: string) {
-    return this.supabaseService.client.auth.signInWithPassword({
+    const result = await this.supabaseService.client.auth.signInWithPassword({
       email,
       password,
     });
+
+    return result;
   }
 
   async signOut(userId: string) {

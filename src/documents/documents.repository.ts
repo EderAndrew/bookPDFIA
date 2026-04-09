@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ChunkEmbedding } from '../ai/ai.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -50,6 +49,7 @@ export class DocumentsRepository {
     matchCount = 5,
     threshold = 0.5,
   ): Promise<DocumentMatch[]> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const { data, error } = await this.supabaseService.client.rpc(
       'match_documents',
       {
@@ -72,11 +72,11 @@ export class DocumentsRepository {
   async findAllByOrganization(
     organizationId: string,
   ): Promise<DocumentSummary[]> {
-    const { data, error } = await this.supabaseService.client
-      .from('documents')
-      .select('filename, created_at')
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const { data, error } = await this.supabaseService.client.rpc(
+      'list_documents_by_organization',
+      { p_organization_id: organizationId },
+    );
 
     if (error) {
       throw new InternalServerErrorException(
@@ -84,25 +84,12 @@ export class DocumentsRepository {
       );
     }
 
-    // Agrupa por filename e conta chunks
-    const map = new Map<string, { totalChunks: number; uploadedAt: string }>();
-
-    for (const row of (data ?? []) as {
-      filename: string;
-      created_at: string;
-    }[]) {
-      const existing = map.get(row.filename);
-      if (existing) {
-        existing.totalChunks += 1;
-      } else {
-        map.set(row.filename, { totalChunks: 1, uploadedAt: row.created_at });
-      }
-    }
-
-    return Array.from(map.entries()).map(([filename, info]) => ({
-      filename,
-      totalChunks: info.totalChunks,
-      uploadedAt: info.uploadedAt,
+    return (
+      data as { filename: string; total_chunks: number; uploaded_at: string }[]
+    ).map((row) => ({
+      filename: row.filename,
+      totalChunks: row.total_chunks,
+      uploadedAt: row.uploaded_at,
     }));
   }
 

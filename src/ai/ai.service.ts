@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 
 export interface ChunkEmbedding {
@@ -12,8 +13,10 @@ export class AiService {
   private readonly embeddingModel = 'text-embedding-3-small';
   private readonly chatModel = 'gpt-4o';
 
-  constructor() {
-    this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  constructor(configService: ConfigService) {
+    this.client = new OpenAI({
+      apiKey: configService.get<string>('OPENAI_API_KEY'),
+    });
   }
 
   async embed(text: string): Promise<number[]> {

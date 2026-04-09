@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   InternalServerErrorException,
@@ -17,6 +16,7 @@ export class OrganizationsRepository {
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async create(name: string): Promise<Organization> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const { data, error } = await this.supabaseService.client
       .from('organizations')
       .insert({ name })
@@ -33,6 +33,7 @@ export class OrganizationsRepository {
   }
 
   async findById(id: string): Promise<Organization> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const { data, error } = await this.supabaseService.client
       .from('organizations')
       .select('*')
@@ -44,6 +45,19 @@ export class OrganizationsRepository {
     }
 
     return data as Organization;
+  }
+
+  async delete(id: string): Promise<void> {
+    const { error } = await this.supabaseService.client
+      .from('organizations')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Erro ao deletar organização: ${error.message}`,
+      );
+    }
   }
 
   async findAll(): Promise<Organization[]> {

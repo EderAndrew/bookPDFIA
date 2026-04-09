@@ -17,4 +17,8 @@ export class OrganizationsService {
   findById(id: string): Promise<Organization> {
     return this.organizationsRepository.findById(id);
   }
+
+  delete(id: string): Promise<void> {
+    return this.organizationsRepository.delete(id);
+  }
 }
