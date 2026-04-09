@@ -54,6 +54,7 @@ PORT=3000
 | `SUPABASE_URL` | Sim | URL do projeto Supabase |
 | `SUPABASE_SERVICE_KEY` | Sim | Service role key do Supabase (ignora RLS) |
 | `PORT` | Não | Porta HTTP (padrão: 3000) |
+| `ALLOWED_ORIGINS` | Não | Origens CORS permitidas, separadas por vírgula (ex: `https://app.empresa.com`). Se ausente, CORS fica bloqueado. |
 
 ## Setup
 

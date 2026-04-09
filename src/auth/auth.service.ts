@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
-  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -23,12 +22,6 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    if (!dto.organization_name) {
-      throw new BadRequestException(
-        'Informe o nome da organização para criar sua conta.',
-      );
-    }
-
     const org = await this.organizationsService.createOrganization(
       dto.organization_name,
     );

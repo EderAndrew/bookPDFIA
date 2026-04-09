@@ -33,6 +33,7 @@ This API is part of the **CodeBookAI** project. It receives uploads of programmi
 | `SUPABASE_URL` | Yes | Supabase project URL |
 | `SUPABASE_SERVICE_KEY` | Yes | Supabase service role key (bypasses RLS) |
 | `PORT` | No | HTTP port (default: 3000) |
+| `ALLOWED_ORIGINS` | No | Comma-separated CORS origins (e.g. `https://app.empresa.com`). If absent, CORS is blocked. |
 
 ## Supabase setup
 
