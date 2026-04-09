@@ -29,7 +29,7 @@ export class AuthRepository {
   }
 
   async signUp(email: string, password: string, metadata: SignUpMetadata) {
-    return this.supabaseService.client.auth.signUp({
+    return this.supabaseService.createAuthClient().auth.signUp({
       email,
       password,
       options: { data: metadata },
@@ -37,12 +37,10 @@ export class AuthRepository {
   }
 
   async signIn(email: string, password: string) {
-    const result = await this.supabaseService.client.auth.signInWithPassword({
+    return this.supabaseService.createAuthClient().auth.signInWithPassword({
       email,
       password,
     });
-
-    return result;
   }
 
   async signOut(userId: string) {
