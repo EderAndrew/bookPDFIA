@@ -107,15 +107,15 @@ NestJS REST API bootstrapped with `helmet` and `ValidationPipe({ whitelist: true
 - `SupabaseService` — wraps `@supabase/supabase-js`; exposes `.client` for direct use by repositories
 
 **`OrganizationsModule`** (`src/organizations/`)
-- `OrganizationsRepository` — CRUD against the `organizations` table
-- `OrganizationsService` — thin wrapper; used by `AuthService` at registration time
+- `OrganizationsRepository` — CRUD against the `organizations` table (`create`, `findById`, `findAll`, `delete`)
+- `OrganizationsService` — thin wrapper exposing `createOrganization`, `findById`, `delete`; used by `AuthService` at registration time (with org rollback on user creation failure)
 
 **`AuthModule`** (`src/auth/`)
-- `POST /auth/register` — `{ email, password, full_name, organization_name }` → creates org + Supabase user with `role: 'admin'` in user metadata → `{ message, user, organization }`
+- `POST /auth/register` — `{ email, password, full_name, organization_name }` → creates org first, then calls `signUp` (standard flow, requires email confirmation) with `role: 'admin'` in user metadata; rolls back (deletes org) if user creation fails → `{ message, user, organization }`
 - `POST /auth/login` — `{ email, password }` → `{ user, session }`
 - `POST /auth/logout` — (auth required) signs out via Supabase admin API
 - `GET /auth/me` — (auth required) returns `{ profile, organization }`
-- `AuthRepository` — delegates to Supabase Auth SDK (`signUp`, `signIn`, `signOut`)
+- `AuthRepository` — delegates to Supabase Auth SDK: `createAdminUser` (admin API, auto-confirms email; not used by current register flow), `signUp`, `signIn`, `signOut`
 - `ProfileRepository` — reads `profiles` table; used by `AuthGuard` to load `role` and `organization_id` on every authenticated request
 - `RolesGuard` + `@Roles('admin')` decorator — applied on top of `AuthGuard`; throws 403 if role not satisfied
 

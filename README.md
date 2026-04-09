@@ -79,6 +79,20 @@ O script cria:
 - Função `match_documents` com filtro por `p_organization_id`
 - Trigger `on_auth_user_created` — cria o profile automaticamente no cadastro via `user_metadata`
 
+## Segurança
+
+| Camada | Mecanismo |
+|---|---|
+| Upload de PDF | Validação de magic bytes (`%PDF`) — MIME type forjado pelo cliente é rejeitado |
+| Tamanho de arquivo | Limite de **50 MB** por upload (rejeição automática pelo Multer) |
+| Nome de arquivo | `basename` + sanitização (`[^a-zA-Z0-9._-]` → `_`) — previne path traversal |
+| Chatbot | Pergunta isolada com delimitadores XML no prompt; `@MaxLength(1000)` no DTO |
+| Erros internos | Mensagens do Supabase/OpenAI nunca chegam ao cliente; logadas internamente com `Logger` |
+| Headers HTTP | `helmet` habilitado globalmente |
+| Autenticação | Token validado via `supabase.auth.getUser()` a cada requisição |
+| Multi-tenancy | `organization_id` extraído sempre do token JWT — nunca do body |
+| Autorização | `RolesGuard` + `@Roles('admin')` em rotas de escrita |
+
 ## Autenticação
 
 Todas as rotas (exceto `POST /auth/register` e `POST /auth/login`) exigem:
@@ -117,7 +131,7 @@ Content-Type: application/json
 }
 ```
 
-**Fazer upload de documentação**
+**Fazer upload de documentação** _(máx. 50 MB, apenas PDF real — validado por magic bytes)_
 ```http
 POST /documents/upload
 Authorization: Bearer <token>

@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { resolve } from 'path';
+import { basename, resolve } from 'path';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { AiService } from '../ai/ai.service';
 import {
@@ -24,6 +24,10 @@ export class DocumentsService {
     private readonly aiService: AiService,
     private readonly documentsRepository: DocumentsRepository,
   ) {}
+
+  private isPdfBuffer(buffer: Buffer): boolean {
+    return buffer.length >= 4 && buffer.slice(0, 4).toString('ascii') === '%PDF';
+  }
 
   private async extractTextFromPdf(buffer: Buffer): Promise<string> {
     const data = new Uint8Array(buffer);
@@ -58,6 +62,12 @@ export class DocumentsService {
     file: Express.Multer.File,
     organizationId: string,
   ): Promise<{ textLength: number; totalChunks: number }> {
+    if (!this.isPdfBuffer(file.buffer)) {
+      throw new BadRequestException(
+        'O arquivo enviado não é um PDF válido.',
+      );
+    }
+
     const rawText = await this.extractTextFromPdf(file.buffer);
 
     if (!this.isTextValid(rawText)) {
@@ -69,12 +79,13 @@ export class DocumentsService {
     const cleanedText = this.cleanText(rawText);
     const chunks = this.chunkText(cleanedText);
 
-    const embeddings = await this.aiService.embedBatch(chunks);
-    await this.documentsRepository.save(
-      embeddings,
-      file.originalname,
-      organizationId,
+    const safeFilename = basename(file.originalname).replace(
+      /[^a-zA-Z0-9._-]/g,
+      '_',
     );
+
+    const embeddings = await this.aiService.embedBatch(chunks);
+    await this.documentsRepository.save(embeddings, safeFilename, organizationId);
 
     return {
       textLength: rawText.length,

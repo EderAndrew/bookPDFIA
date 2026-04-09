@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthRepository } from './auth.repository';
@@ -11,6 +14,8 @@ import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly authRepository: AuthRepository,
     private readonly profileRepository: ProfileRepository,
@@ -28,26 +33,33 @@ export class AuthService {
       dto.organization_name,
     );
 
-    const { data, error } = await this.authRepository.signUp(
-      dto.email,
-      dto.password,
-      {
-        full_name: dto.full_name,
-        organization_id: org.id,
-        role: 'admin',
-      },
-    );
+    try {
+      const { data, error } = await this.authRepository.signUp(
+        dto.email,
+        dto.password,
+        {
+          full_name: dto.full_name,
+          organization_id: org.id,
+          role: 'admin',
+        },
+      );
 
-    if (error) {
-      throw new UnauthorizedException(error.message);
+      if (error) {
+        this.logger.error(`Erro ao criar usuário: ${error.message}`);
+        throw new InternalServerErrorException(
+          'Não foi possível criar a conta. Tente novamente mais tarde.',
+        );
+      }
+
+      return {
+        message: 'Conta criada com sucesso.',
+        user: data.user,
+        organization: org,
+      };
+    } catch (error) {
+      await this.organizationsService.delete(org.id);
+      throw error;
     }
-
-    return {
-      message:
-        'Conta criada com sucesso. Verifique seu e-mail para confirmar o cadastro.',
-      user: data.user,
-      organization: org,
-    };
   }
 
   async login(dto: LoginDto) {
@@ -70,7 +82,10 @@ export class AuthService {
     const { error } = await this.authRepository.signOut(userId);
 
     if (error) {
-      throw new UnauthorizedException(error.message);
+      this.logger.error(`Erro ao realizar logout: ${error.message}`);
+      throw new InternalServerErrorException(
+        'Não foi possível realizar o logout. Tente novamente.',
+      );
     }
 
     return { message: 'Logout realizado com sucesso.' };
