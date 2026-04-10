@@ -105,7 +105,9 @@ NestJS REST API bootstrapped with `helmet` and `ValidationPipe({ whitelist: true
 - `ChunkEmbedding` is exported from here and used by `DocumentsRepository`
 
 **`SupabaseModule`** (`src/supabase/`)
-- `SupabaseService` — wraps `@supabase/supabase-js`; exposes `.client` for direct use by repositories
+- `SupabaseService` — two-client design to prevent session contamination:
+  - `.client` — singleton with service-role key, `persistSession: false`; used for PostgREST queries and admin auth operations (e.g. `signOut`, `getUser`)
+  - `.createAuthClient()` — returns a **new** client per call; must be used for user-facing `signIn`/`signUp` so that user sessions never bleed into the singleton
 
 **`OrganizationsModule`** (`src/organizations/`)
 - `OrganizationsRepository` — CRUD against the `organizations` table (`create`, `findById`, `findAll`, `delete`)
@@ -119,16 +121,19 @@ NestJS REST API bootstrapped with `helmet` and `ValidationPipe({ whitelist: true
 - `AuthRepository` — delegates to Supabase Auth SDK: `createAdminUser` (admin API, auto-confirms email; not used by current register flow), `signUp`, `signIn`, `signOut`
 - `ProfileRepository` — reads `profiles` table; used by `AuthGuard` to load `role` and `organization_id` on every authenticated request
 - `RolesGuard` + `@Roles('admin')` decorator — applied on top of `AuthGuard`; throws 403 if role not satisfied
+- `@CurrentUser()` decorator (`src/auth/decorators/current-user.decorator.ts`) — extracts `request.user` typed as `AuthenticatedUser`
 
 **`DocumentsModule`** (`src/documents/`)
-- `POST /documents/upload` — `@Roles('admin')` — multipart `file`, `application/pdf` only; returns `{ textLength, totalChunks }`
+- `POST /documents/upload` — `@Roles('admin')` — multipart `file`, `application/pdf` only, 50 MB limit; returns `{ textLength, totalChunks }`
 - `GET /documents` — lists all documents for the user's organization (grouped by filename with chunk count)
 - `DELETE /documents/:filename` — `@Roles('admin')` — deletes all chunks for that filename within the organization
 - `POST /chat` — `{ question }` — RAG Q&A over the organization's documents; returns `{ answer, sources: [{filename}] }`
 - `DocumentsService` — extracts text via `pdfjs-dist` (legacy build, Node.js worker), validates with `isTextValid`, cleans, chunks (size 1000, overlap 200), embeds batch, saves to `documents` table. `cleanText` / `chunkText` / `isTextValid` are public for unit testing; `isTextValid` rejects scanned PDFs by checking ratio of non-Latin characters (threshold: < 20%).
-- `DocumentsRepository` — wraps all `documents` table queries; `searchSimilar` calls `match_documents` RPC with `p_organization_id`
+- `DocumentsRepository` — wraps all `documents` table queries; `searchSimilar` calls `match_documents` RPC with `p_organization_id` (8 results, 0.4 similarity threshold)
 
-**`AppModule`** imports `ConfigModule.forRoot({ isGlobal: true })`, `AiModule`, `SupabaseModule`, `AuthModule`, `OrganizationsModule`, `DocumentsModule`.
+**Rate limiting:** `ThrottlerGuard` is registered globally via `APP_GUARD` (100 req / 60 s). Auth endpoints override this with `@Throttle`: `POST /auth/register` → 5/min, `POST /auth/login` → 10/min.
+
+**`AppModule`** imports `ConfigModule.forRoot({ isGlobal: true })`, `ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }])`, `AiModule`, `SupabaseModule`, `AuthModule`, `OrganizationsModule`, `DocumentsModule`.
 
 **Testing:** Unit specs (`*.spec.ts`) live alongside source files in `src/`. E2E specs live in `test/` with a separate `jest-e2e.json` config.
 
