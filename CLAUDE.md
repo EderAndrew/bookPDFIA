@@ -2,89 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Commands
-
-```bash
-pnpm install          # Install dependencies
-pnpm run start:dev    # Run in watch mode (development)
-pnpm run build        # Compile to dist/
-pnpm run start:prod   # Run compiled output
-
-pnpm run lint         # ESLint with auto-fix
-pnpm run format       # Prettier format src/ and test/
-
-pnpm run test                        # Unit tests (jest, rootDir: src/)
-pnpm run test:watch                  # Unit tests in watch mode
-pnpm run test:cov                    # Unit tests with coverage
-pnpm run test:e2e                    # E2E tests (test/jest-e2e.json)
-pnpm run test -- --testPathPattern=app  # Run a single spec file
-pnpm run start:debug                 # Debug mode with watch
-```
-
 ## Purpose
 
 This API is part of the **CodeBookAI** project. It receives uploads of programming documentation or book PDFs, processes the content, and exposes endpoints for RAG-based Q&A grounded in the uploaded PDFs. The system is multi-tenant: each organization has its own isolated document space.
 
-## Environment variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `OPENAI_API_KEY` | Yes | OpenAI API key used by `AiService` to generate embeddings |
-| `SUPABASE_URL` | Yes | Supabase project URL |
-| `SUPABASE_SERVICE_KEY` | Yes | Supabase service role key (bypasses RLS) |
-| `PORT` | No | HTTP port (default: 3000) |
-| `ALLOWED_ORIGINS` | No | Comma-separated CORS origins (e.g. `https://app.empresa.com`). If absent, CORS is blocked. |
-
-## Supabase setup
-
-Run this SQL in the Supabase SQL editor before starting the API:
-
-```sql
--- Organizations table
-CREATE TABLE organizations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  created_at timestamptz DEFAULT now()
-);
-
--- User profiles (synced from auth.users)
-CREATE TABLE profiles (
-  id uuid PRIMARY KEY REFERENCES auth.users(id),
-  organization_id uuid REFERENCES organizations(id),
-  role text NOT NULL DEFAULT 'user',  -- 'admin' | 'user'
-  full_name text,
-  created_at timestamptz DEFAULT now()
-);
-
--- PDF document chunks with embeddings (scoped per organization)
-CREATE TABLE documents (
-  id bigserial PRIMARY KEY,
-  organization_id uuid REFERENCES organizations(id),
-  filename text,
-  content text,
-  embedding vector(1536),
-  metadata jsonb,
-  created_at timestamptz DEFAULT now()
-);
-CREATE INDEX ON documents(organization_id);
-
--- RPC for RAG similarity search
-CREATE OR REPLACE FUNCTION match_documents(
-  query_embedding vector(1536),
-  match_count int DEFAULT 5,
-  match_threshold float DEFAULT 0.5,
-  p_organization_id uuid DEFAULT NULL
-)
-RETURNS TABLE (id bigint, content text, similarity float, filename text)
-LANGUAGE sql STABLE AS $$
-  SELECT id, content, 1 - (embedding <=> query_embedding) AS similarity, filename
-  FROM documents
-  WHERE (p_organization_id IS NULL OR organization_id = p_organization_id)
-    AND 1 - (embedding <=> query_embedding) > match_threshold
-  ORDER BY embedding <=> query_embedding
-  LIMIT match_count;
-$$;
-```
 
 ## Architecture
 
