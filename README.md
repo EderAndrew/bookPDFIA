@@ -71,9 +71,12 @@ pnpm run build && pnpm run start:prod
 
 ## Banco de dados (Supabase)
 
-Execute o SQL em `supabase/migrations/001_multi_tenant_refactor.sql` no **SQL Editor** do Supabase.
+Execute os scripts de migração no **SQL Editor** do Supabase, na ordem:
 
-O script cria:
+1. `supabase/migrations/001_multi_tenant_refactor.sql` — cria as tabelas e a função `match_documents`
+2. `supabase/migrations/002_list_documents_rpc.sql` — cria a função `list_documents_by_organization`
+
+A migração `001` cria:
 - Tabela `organizations`
 - Tabela `profiles` (extensão de `auth.users` com `role` e `organization_id`)
 - Tabela `documents` com índice `ivfflat` para busca vetorial por organização
@@ -90,6 +93,7 @@ O script cria:
 | Chatbot | Pergunta isolada com delimitadores XML no prompt; `@MaxLength(1000)` no DTO |
 | Erros internos | Mensagens do Supabase/OpenAI nunca chegam ao cliente; logadas internamente com `Logger` |
 | Headers HTTP | `helmet` habilitado globalmente |
+| Rate limiting | 100 req/60 s global; `/auth/register` → 5/min; `/auth/login` → 10/min |
 | Autenticação | Token validado via `supabase.auth.getUser()` a cada requisição |
 | Multi-tenancy | `organization_id` extraído sempre do token JWT — nunca do body |
 | Autorização | `RolesGuard` + `@Roles('admin')` em rotas de escrita |

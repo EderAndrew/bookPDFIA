@@ -1,6 +1,7 @@
 import {
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -13,6 +14,8 @@ export interface Organization {
 
 @Injectable()
 export class OrganizationsRepository {
+  private readonly logger = new Logger(OrganizationsRepository.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async create(name: string): Promise<Organization> {
@@ -24,9 +27,8 @@ export class OrganizationsRepository {
       .single();
 
     if (error) {
-      throw new InternalServerErrorException(
-        `Erro ao criar organização: ${error.message}`,
-      );
+      this.logger.error('Erro ao criar organização', error.message);
+      throw new InternalServerErrorException('Erro ao criar organização.');
     }
 
     return data as Organization;
@@ -54,9 +56,8 @@ export class OrganizationsRepository {
       .eq('id', id);
 
     if (error) {
-      throw new InternalServerErrorException(
-        `Erro ao deletar organização: ${error.message}`,
-      );
+      this.logger.error('Erro ao deletar organização', error.message);
+      throw new InternalServerErrorException('Erro ao deletar organização.');
     }
   }
 
@@ -67,9 +68,8 @@ export class OrganizationsRepository {
       .order('created_at', { ascending: false });
 
     if (error) {
-      throw new InternalServerErrorException(
-        `Erro ao listar organizações: ${error.message}`,
-      );
+      this.logger.error('Erro ao listar organizações', error.message);
+      throw new InternalServerErrorException('Erro ao listar organizações.');
     }
 
     return (data ?? []) as Organization[];

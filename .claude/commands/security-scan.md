@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Grep, Glob, Bash(git diff:*)
+allowed-tools: Read, Grep, Glob, Bash(npm audit:*), Bash(pip-audit:*)
 description: Scan completo de vulnerabilidades e boas práticas de segurança
 argument-hint: "src/auth | src/documents/* | . (padrão: projeto inteiro)"
 ---
@@ -32,7 +32,7 @@ injeções, autenticação e dados sensíveis.
 - Cookies sem flags `HttpOnly` / `Secure` / `SameSite`
 
 ## Dependências
-- !`npm audit --json 2>/dev/null || pip-audit 2>/dev/null` (detecta automaticamente o package manager)
+- !`npm audit --json --package-lock-only 2>/dev/null || echo "lockfile não encontrado, pulando npm audit"` (detecta automaticamente o package manager)
 
 ## Configurações Inseguras
 - CORS muito permissivo (`*`)

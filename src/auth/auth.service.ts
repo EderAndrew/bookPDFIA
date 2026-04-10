@@ -45,7 +45,10 @@ export class AuthService {
 
       return {
         message: 'Conta criada com sucesso.',
-        user: data.user,
+        user: {
+          id: data.user!.id,
+          email: data.user!.email,
+        },
         organization: org,
       };
     } catch (error) {

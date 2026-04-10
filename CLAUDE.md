@@ -118,7 +118,8 @@ NestJS REST API bootstrapped with `helmet` and `ValidationPipe({ whitelist: true
 - `POST /auth/login` — `{ email, password }` → `{ user, session }`
 - `POST /auth/logout` — (auth required) signs out via Supabase admin API
 - `GET /auth/me` — (auth required) returns `{ profile, organization }`
-- `AuthRepository` — delegates to Supabase Auth SDK: `createAdminUser` (admin API, auto-confirms email; not used by current register flow), `signUp`, `signIn`, `signOut`
+- `AuthGuard` (`src/auth/guards/auth.guard.ts`) — validates `Bearer` token via `authRepository.getUser(token)`, loads profile, injects `AuthenticatedUser` into `request.user`
+- `AuthRepository` — delegates to Supabase Auth SDK: `createAdminUser` (admin API, auto-confirms email; not used by current register flow), `signUp`, `signIn`, `signOut`, `getUser`
 - `ProfileRepository` — reads `profiles` table; used by `AuthGuard` to load `role` and `organization_id` on every authenticated request
 - `RolesGuard` + `@Roles('admin')` decorator — applied on top of `AuthGuard`; throws 403 if role not satisfied
 - `@CurrentUser()` decorator (`src/auth/decorators/current-user.decorator.ts`) — extracts `request.user` typed as `AuthenticatedUser`
@@ -142,3 +143,50 @@ NestJS REST API bootstrapped with `helmet` and `ValidationPipe({ whitelist: true
 **Language:** User-facing strings and error messages are in Portuguese (e.g., `"Nenhum arquivo enviado."`, `"Credenciais inválidas."`). Keep new error messages in Portuguese.
 
 **Not yet implemented:** Code generation endpoint; npm library crawler (`lib_docs`); project/dependency management.
+
+## Key design decisions
+
+- `SupabaseService` uses a two-client design: singleton with service-role key (PostgREST) + `createAuthClient()` per call for signIn/signUp — prevents session contamination between users
+- Prompt injection protection via `<pergunta_do_usuario>` tags + explicit instruction in `AiService` system prompt
+- Upload validates PDF magic bytes (`isPdfBuffer`) in addition to MIME type — MIME type alone is insufficient since it is client-controlled
+- `isTextValid` rejects scanned PDFs by checking that non-Latin characters (charCode > 300) make up less than 20% of printable characters
+
+## Known security gaps
+
+- **HIGH:** `SUPABASE_SERVICE_KEY` in `.env` starts with `sb_publishable_` (anon key prefix) — verify it is actually the service role key (`sb_secret_`); if not, RLS is not bypassed and `auth.admin.*` operations will fail
+- **MEDIUM:** `LoginDto.password` has no `@MaxLength` — allows arbitrarily long strings to reach Supabase Auth (`src/auth/dto/login.dto.ts`)
+- **MEDIUM:** `POST /chat` has no `@Throttle` override — expensive endpoint (embed + GPT-4o) only has the global 100 req/60s IP-based cap
+- **LOW:** `SupabaseService` uses `process.env!` — switch to `ConfigService.getOrThrow()` for fail-fast boot when env vars are missing
+- **LOW:** `AiService` uses `configService.get()` instead of `getOrThrow()` — app boots with `apiKey: undefined` if `OPENAI_API_KEY` is absent
+
+## Contexto atual de desenvolvimento
+
+**Última atualização:** 2026-04-10
+
+### Commits recentes
+```
+1665749 Claude command created
+e280227 fix: resolve contaminação de sessão no cliente Supabase singleton
+54e4444 fix: corrige SupabaseService para nunca persistir sessão de usuário
+4117baa refactor: clean code e correções de qualidade
+962d2e2 security: corrige vulnerabilidades importantes de segurança
+```
+
+### Modificações não commitadas nessa sessão
+- `package.json`, `pnpm-lock.yaml` — `pnpm.overrides` adicionado para lodash; `lodash@4.17.23` removido do lockfile
+- `src/documents/documents.repository.ts` — `error.message` sanitizado em 4 locais; Logger adicionado
+- `src/organizations/organizations.repository.ts` — `error.message` sanitizado em 3 locais; Logger adicionado
+- `CLAUDE.md` — seção "Known security gaps" adicionada; contexto efêmero de sessão anterior removido
+- `src/auth/auth.service.ts`, `src/auth/dto/register.dto.ts`, `src/auth/profile.repository.ts` — correções de sessões anteriores ainda não commitadas
+
+### O que foi feito nessa sessão
+- **`/init`** — CLAUDE.md revisado: seção de contexto efêmero removida, "Known security gaps" permanente adicionada, item do axios (já corrigido) removido
+- **`/security-scan`** — scan completo; 8 problemas encontrados: CRITICAL (credenciais reais no `.env`), HIGH (formato do `SUPABASE_SERVICE_KEY`, vazamento de `error.message`, lodash 4.17.23), MEDIUM (`LoginDto.password` sem MaxLength, `POST /chat` sem throttle), LOW (`process.env!`, `configService.get()`)
+- **Corrigido** `documents.repository.ts` e `organizations.repository.ts` — `error.message` do Supabase não é mais exposto ao cliente; erros são logados internamente e o cliente recebe mensagem genérica
+
+### Pendências de segurança
+- [ ] **HIGH:** Verificar `SUPABASE_SERVICE_KEY` no `.env` — valor começa com `sb_publishable_` (formato de chave anon), deveria ser `sb_secret_` (service role). Se incorreto, RLS não é bypassado e `auth.admin.*` falha
+- [ ] **MEDIUM:** `LoginDto.password` sem `@MaxLength(128)` — `src/auth/dto/login.dto.ts` linha 8
+- [ ] **MEDIUM:** `POST /chat` sem `@Throttle` — endpoint caro (embed + GPT-4o) usa apenas o limite global de 100/60s
+- [ ] **LOW:** `SupabaseService` — substituir `process.env!` por `ConfigService.getOrThrow()` — `src/supabase/supabase.service.ts`
+- [ ] **LOW:** `AiService` — substituir `configService.get()` por `configService.getOrThrow()` — `src/ai/ai.service.ts` linha 18

@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 export interface Profile {
@@ -12,6 +16,8 @@ export interface Profile {
 
 @Injectable()
 export class ProfileRepository {
+  private readonly logger = new Logger(ProfileRepository.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async findById(userId: string): Promise<Profile | null> {
@@ -22,11 +28,11 @@ export class ProfileRepository {
       .single();
 
     if (error) {
-      throw new InternalServerErrorException(
-        `Erro ao buscar perfil: ${error.message}`,
-      );
+      if (error.code === 'PGRST116') return null;
+      this.logger.error('Erro ao buscar perfil', error.message);
+      throw new InternalServerErrorException('Erro ao buscar perfil.');
     }
 
-    return data as Profile | null;
+    return data as Profile;
   }
 }

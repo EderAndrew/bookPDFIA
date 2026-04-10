@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ChunkEmbedding } from '../ai/ai.service';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -17,6 +17,8 @@ export interface DocumentSummary {
 
 @Injectable()
 export class DocumentsRepository {
+  private readonly logger = new Logger(DocumentsRepository.name);
+
   constructor(private readonly supabaseService: SupabaseService) {}
 
   async save(
@@ -37,9 +39,8 @@ export class DocumentsRepository {
       .insert(rows);
 
     if (error) {
-      throw new InternalServerErrorException(
-        `Erro ao salvar embeddings: ${error.message}`,
-      );
+      this.logger.error('Erro ao salvar embeddings', error.message);
+      throw new InternalServerErrorException('Erro ao salvar embeddings.');
     }
   }
 
@@ -61,9 +62,8 @@ export class DocumentsRepository {
     );
 
     if (error) {
-      throw new InternalServerErrorException(
-        `Erro na busca semântica: ${error.message}`,
-      );
+      this.logger.error('Erro na busca semântica', error.message);
+      throw new InternalServerErrorException('Erro na busca semântica.');
     }
 
     return data as DocumentMatch[];
@@ -79,9 +79,8 @@ export class DocumentsRepository {
     );
 
     if (error) {
-      throw new InternalServerErrorException(
-        `Erro ao listar documentos: ${error.message}`,
-      );
+      this.logger.error('Erro ao listar documentos', error.message);
+      throw new InternalServerErrorException('Erro ao listar documentos.');
     }
 
     return (
@@ -104,9 +103,8 @@ export class DocumentsRepository {
       .eq('organization_id', organizationId);
 
     if (error) {
-      throw new InternalServerErrorException(
-        `Erro ao deletar documento: ${error.message}`,
-      );
+      this.logger.error('Erro ao deletar documento', error.message);
+      throw new InternalServerErrorException('Erro ao deletar documento.');
     }
   }
 }
