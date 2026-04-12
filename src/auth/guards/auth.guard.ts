@@ -7,6 +7,7 @@ import {
 import { Request } from 'express';
 import { AuthRepository } from '../auth.repository';
 import { ProfileRepository } from '../profile.repository';
+import type { AuthenticatedUser } from '../types';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -35,7 +36,7 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Perfil de usuário não encontrado.');
     }
 
-    (request as Request & { user: unknown }).user = {
+    (request as Request & { user: AuthenticatedUser }).user = {
       id: data.user.id,
       email: data.user.email,
       role: profile.role,

@@ -23,7 +23,7 @@ export class ProfileRepository {
   async findById(userId: string): Promise<Profile | null> {
     const { data, error } = await this.supabaseService.client
       .from('profiles')
-      .select('*')
+      .select('id, organization_id, role, full_name, created_at')
       .eq('id', userId)
       .single();
 

@@ -42,7 +42,15 @@ export class OrganizationsRepository {
       .eq('id', id)
       .single();
 
-    if (error || !data) {
+    if (error) {
+      if (error.code === 'PGRST116') {
+        throw new NotFoundException('Organização não encontrada.');
+      }
+      this.logger.error('Erro ao buscar organização', error.message);
+      throw new InternalServerErrorException('Erro ao buscar organização.');
+    }
+
+    if (!data) {
       throw new NotFoundException('Organização não encontrada.');
     }
 

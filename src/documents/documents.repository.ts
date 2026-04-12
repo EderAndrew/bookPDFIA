@@ -31,7 +31,6 @@ export class DocumentsRepository {
       filename,
       content: chunk,
       embedding,
-      metadata: { filename },
     }));
 
     const { error } = await this.supabaseService.client

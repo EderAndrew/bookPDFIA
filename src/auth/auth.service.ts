@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { AuthRepository } from './auth.repository';
 import { ProfileRepository } from './profile.repository';
-import { OrganizationsService } from '../organizations/organizations.service';
+import { OrganizationsRepository } from '../organizations/organizations.repository';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -17,13 +17,11 @@ export class AuthService {
   constructor(
     private readonly authRepository: AuthRepository,
     private readonly profileRepository: ProfileRepository,
-    private readonly organizationsService: OrganizationsService,
+    private readonly organizationsRepository: OrganizationsRepository,
   ) {}
 
   async register(dto: RegisterDto) {
-    const org = await this.organizationsService.createOrganization(
-      dto.organization_name,
-    );
+    const org = await this.organizationsRepository.create(dto.organization_name);
 
     try {
       const { data, error } = await this.authRepository.signUp(
@@ -52,7 +50,9 @@ export class AuthService {
         organization: org,
       };
     } catch (error) {
-      await this.organizationsService.delete(org.id);
+      await this.organizationsRepository.delete(org.id).catch((rollbackErr) => {
+        this.logger.error('Falha no rollback da organização', rollbackErr);
+      });
       throw error;
     }
   }
@@ -93,7 +93,7 @@ export class AuthService {
       throw new UnauthorizedException('Perfil não encontrado.');
     }
 
-    const organization = await this.organizationsService.findById(
+    const organization = await this.organizationsRepository.findById(
       profile.organization_id,
     );
 

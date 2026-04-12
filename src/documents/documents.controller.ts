@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  Body,
   Controller,
   Delete,
   Get,
@@ -15,16 +14,15 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import type { AuthenticatedUser } from '../auth/roles.guard';
+import type { AuthenticatedUser } from '../auth/types';
 import { DocumentsService } from './documents.service';
-import { AskDto } from './dto/ask.dto';
 
-@Controller()
+@Controller('documents')
 @UseGuards(AuthGuard, RolesGuard)
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
-  @Post('documents/upload')
+  @Post('upload')
   @Roles('admin')
   @UseInterceptors(
     FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }),
@@ -44,7 +42,7 @@ export class DocumentsController {
     return this.documentsService.processPdf(file, user.organization_id);
   }
 
-  @Delete('documents/:filename')
+  @Delete(':filename')
   @Roles('admin')
   deleteDocument(
     @Param('filename') filename: string,
@@ -53,13 +51,8 @@ export class DocumentsController {
     return this.documentsService.deleteDocument(filename, user.organization_id);
   }
 
-  @Get('documents')
+  @Get()
   listDocuments(@CurrentUser() user: AuthenticatedUser) {
     return this.documentsService.listDocuments(user.organization_id);
-  }
-
-  @Post('chat')
-  ask(@Body() dto: AskDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.documentsService.ask(dto.question, user.organization_id);
   }
 }

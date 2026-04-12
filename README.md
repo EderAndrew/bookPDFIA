@@ -199,27 +199,31 @@ Authorization: Bearer <token>
 ```
 src/
 ├── auth/
-│   ├── guards/auth.guard.ts       # Valida token + carrega profile (role, org)
-│   ├── roles.guard.ts             # Verifica @Roles('admin')
-│   ├── roles.decorator.ts         # Decorator @Roles(...)
-│   ├── profile.repository.ts      # Queries na tabela profiles
-│   ├── auth.repository.ts         # Supabase Auth SDK
+│   ├── guards/auth.guard.ts          # Valida token + carrega profile (role, org)
+│   ├── decorators/
+│   │   └── current-user.decorator.ts # Extrai request.user tipado
+│   ├── roles.guard.ts                # Verifica @Roles('admin')
+│   ├── roles.decorator.ts            # Decorator @Roles(...)
+│   ├── types.ts                      # Interface AuthenticatedUser
+│   ├── profile.repository.ts         # Queries na tabela profiles
+│   ├── auth.repository.ts            # Supabase Auth SDK
 │   ├── auth.service.ts
 │   ├── auth.controller.ts
 │   └── dto/
 ├── organizations/
 │   ├── organizations.repository.ts
-│   ├── organizations.service.ts
 │   └── organizations.module.ts
 ├── documents/
-│   ├── documents.controller.ts    # Rotas /documents/* e /chat
-│   ├── documents.service.ts       # PDF processing + RAG pipeline
-│   ├── documents.repository.ts    # Queries + busca vetorial
+│   ├── documents.controller.ts       # Rotas /documents/*
+│   ├── chat.controller.ts            # Rota POST /chat
+│   ├── documents.service.ts          # PDF processing + RAG pipeline
+│   ├── documents.repository.ts       # Queries + busca vetorial
+│   ├── document-processing.utils.ts  # cleanText, chunkText, isTextValid
 │   └── dto/
 ├── ai/
-│   └── ai.service.ts              # OpenAI embeddings + chat (gpt-4o)
+│   └── ai.service.ts                 # OpenAI embeddings + chat (gpt-4o)
 └── supabase/
-    └── supabase.service.ts        # Cliente Supabase
+    └── supabase.service.ts           # Cliente Supabase
 ```
 
 ## Testes

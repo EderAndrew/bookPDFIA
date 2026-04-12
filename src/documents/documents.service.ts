@@ -8,13 +8,14 @@ import {
   DocumentsRepository,
   DocumentSummary,
 } from './documents.repository';
+import { cleanText, chunkText, isTextValid } from './document-processing.utils';
 
 // Aponta para o worker real — necessário em Node.js com pdfjs-dist v4+
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `file://${resolve(process.cwd(), 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs')}`;
 
-const CHUNK_SIZE = 1000;
-const CHUNK_OVERLAP = 200;
+const SEARCH_MATCH_COUNT = 8;
+const SEARCH_SIMILARITY_THRESHOLD = 0.4;
 
 @Injectable()
 export class DocumentsService {
@@ -69,14 +70,14 @@ export class DocumentsService {
 
     const rawText = await this.extractTextFromPdf(file.buffer);
 
-    if (!this.isTextValid(rawText)) {
+    if (!isTextValid(rawText)) {
       throw new BadRequestException(
         'Não foi possível extrair o texto deste PDF. O arquivo pode estar corrompido ou ser um PDF escaneado.',
       );
     }
 
-    const cleanedText = this.cleanText(rawText);
-    const chunks = this.chunkText(cleanedText);
+    const cleanedText = cleanText(rawText);
+    const chunks = chunkText(cleanedText);
 
     const safeFilename = basename(file.originalname).replace(
       /[^a-zA-Z0-9._-]/g,
@@ -105,8 +106,8 @@ export class DocumentsService {
       await this.documentsRepository.searchSimilar(
         questionEmbedding,
         organizationId,
-        8, // mais contexto = respostas mais completas
-        0.4, // threshold menor = não perde trechos relevantes em docs técnicos
+        SEARCH_MATCH_COUNT,
+        SEARCH_SIMILARITY_THRESHOLD,
       );
 
     if (!matches.length) {
@@ -141,69 +142,5 @@ export class DocumentsService {
 
   deleteDocument(filename: string, organizationId: string): Promise<void> {
     return this.documentsRepository.deleteByFilename(filename, organizationId);
-  }
-
-  // ---------------------------------------------------------------
-  // Helpers (públicos para facilitar testes unitários)
-  // ---------------------------------------------------------------
-
-  private readonly reControlChars = new RegExp(
-    '[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', // eslint-disable-line no-control-regex
-    'g',
-  );
-
-  cleanText(text: string): string {
-    return text
-      .replace(this.reControlChars, '')
-      .replace(/[\uFFFD\uD800-\uDFFF]/g, '')
-      .replace(/[\uE000-\uF8FF]/g, '')
-      .replace(/\n{3,}/g, '\n\n')
-      .replace(/[ \t]+/g, ' ')
-      .replace(/^ +$/gm, '')
-      .trim();
-  }
-
-  chunkText(text: string): string[] {
-    const paragraphs = text
-      .split(/\n{2,}/)
-      .map((p) => p.replace(/\n/g, ' ').trim())
-      .filter((p) => p.length > 30);
-
-    const chunks: string[] = [];
-    let current = '';
-
-    for (const paragraph of paragraphs) {
-      if ((current + '\n\n' + paragraph).length <= CHUNK_SIZE) {
-        current = current ? current + '\n\n' + paragraph : paragraph;
-      } else {
-        if (current) {
-          chunks.push(current.trim());
-        }
-
-        if (paragraph.length > CHUNK_SIZE) {
-          let start = 0;
-
-          while (start < paragraph.length) {
-            chunks.push(paragraph.slice(start, start + CHUNK_SIZE).trim());
-            start += CHUNK_SIZE - CHUNK_OVERLAP;
-          }
-          current = '';
-        } else {
-          current = paragraph;
-        }
-      }
-    }
-
-    if (current) chunks.push(current.trim());
-    return chunks;
-  }
-
-  isTextValid(text: string): boolean {
-    const printable = text.replace(/\s/g, '');
-    if (printable.length === 0) return false;
-    const nonLatin = printable
-      .split('')
-      .filter((c) => c.charCodeAt(0) > 300).length;
-    return nonLatin / printable.length < 0.2;
   }
 }

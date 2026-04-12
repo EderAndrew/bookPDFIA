@@ -5,12 +5,9 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { AuthenticatedUser } from './types';
 
-export interface AuthenticatedUser {
-  id: string;
-  role: 'admin' | 'user';
-  organization_id: string;
-}
+export type { AuthenticatedUser };
 
 @Injectable()
 export class RolesGuard implements CanActivate {
