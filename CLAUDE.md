@@ -25,9 +25,9 @@ pnpm format             # Prettier --write
 ```
 
 ## Security
-
-- Run `/owasp-scan` before every PR
-- Reference: https://owasp.org/Top10/
+- Antes de todo PR com mudanças em auth: /auth-scan src/auth/
+- Scan geral de segurança: /owasp-scan`
+- Referências: OWASP ASVS Level 2 para autenticação
 
 ## Purpose
 

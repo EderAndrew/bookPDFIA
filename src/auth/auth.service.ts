@@ -8,8 +8,11 @@ import {
 import { AuthRepository } from './auth.repository';
 import { ProfileRepository } from './profile.repository';
 import { OrganizationsRepository } from '../organizations/organizations.repository';
+import { TokenBlacklistService } from './token-blacklist.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { InviteDto } from './dto/invite.dto';
+import type { AuthenticatedUser } from './types';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +22,7 @@ export class AuthService {
     private readonly authRepository: AuthRepository,
     private readonly profileRepository: ProfileRepository,
     private readonly organizationsRepository: OrganizationsRepository,
+    private readonly tokenBlacklist: TokenBlacklistService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -76,7 +80,7 @@ export class AuthService {
     };
   }
 
-  async logout(userId: string) {
+  async logout(userId: string, token: string) {
     const { error } = await this.authRepository.signOut(userId);
 
     if (error) {
@@ -86,7 +90,36 @@ export class AuthService {
       );
     }
 
+    this.tokenBlacklist.add(token);
+
     return { message: 'Logout realizado com sucesso.' };
+  }
+
+  async invite(dto: InviteDto, admin: AuthenticatedUser) {
+    const { data, error } = await this.authRepository.signUp(
+      dto.email,
+      dto.password,
+      {
+        full_name: dto.full_name,
+        organization_id: admin.organization_id,
+        role: 'user',
+      },
+    );
+
+    if (error) {
+      this.logger.error(`Erro ao convidar usuário: ${error.message}`);
+      throw new InternalServerErrorException(
+        'Não foi possível criar o convite. Tente novamente mais tarde.',
+      );
+    }
+
+    return {
+      message: 'Usuário convidado com sucesso.',
+      user: {
+        id: data.user!.id,
+        email: data.user!.email,
+      },
+    };
   }
 
   async getMe(userId: string) {

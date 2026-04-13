@@ -7,6 +7,7 @@ import {
 import { Request } from 'express';
 import { AuthRepository } from '../auth.repository';
 import { ProfileRepository } from '../profile.repository';
+import { TokenBlacklistService } from '../token-blacklist.service';
 import type { AuthenticatedUser } from '../types';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly authRepository: AuthRepository,
     private readonly profileRepository: ProfileRepository,
+    private readonly tokenBlacklist: TokenBlacklistService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -22,6 +24,10 @@ export class AuthGuard implements CanActivate {
 
     if (!token) {
       throw new UnauthorizedException('Token não fornecido.');
+    }
+
+    if (this.tokenBlacklist.has(token)) {
+      throw new UnauthorizedException('Token inválido ou expirado.');
     }
 
     const { data, error } = await this.authRepository.getUser(token);
