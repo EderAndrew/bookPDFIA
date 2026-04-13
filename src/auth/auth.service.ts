@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 import {
   Injectable,
   InternalServerErrorException,
@@ -64,9 +65,11 @@ export class AuthService {
     );
 
     if (error) {
+      this.logger.warn(`Falha de login para ${dto.email}: ${error.status ?? 'sem código'}`);
       throw new UnauthorizedException('Credenciais inválidas.');
     }
 
+    this.logger.log(`Login bem-sucedido: ${dto.email}`);
     return {
       user: data.user,
       session: data.session,
