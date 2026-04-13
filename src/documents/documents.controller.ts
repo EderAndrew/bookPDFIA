@@ -9,6 +9,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -24,6 +25,7 @@ export class DocumentsController {
 
   @Post('upload')
   @Roles('admin')
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @UseInterceptors(
     FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }),
   )
